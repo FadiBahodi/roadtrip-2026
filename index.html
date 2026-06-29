@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Winnipeg → Toronto · Father-Son Roadtrip · Jun 29 – Jul 2, 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --ink: #1d1d1f;
+    --muted: #6e6e73;
+    --accent: #c2410c;
+    --accent-soft: #fff7ed;
+    --water: #0369a1;
+    --water-soft: #e0f2fe;
+    --line: #e5e7eb;
+    --d1: #fb923c;
+    --d2: #f87171;
+    --d3: #a78bfa;
+    --d4: #34d399;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; color: var(--ink); background: #fafaf9; line-height: 1.6; }
+  .hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0c4a6e 100%);
+    color: white;
+    padding: 60px 24px 48px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 42px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.02em; }
+  .hero .subtitle { font-size: 18px; opacity: 0.85; font-weight: 400; }
+  .hero .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 800px; margin: 32px auto 0; }
+  .stat { background: rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; }
+  .stat-num { font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 13px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+  .section { padding: 48px 0; }
+  .section-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .section-sub { font-size: 15px; color: var(--muted); margin-bottom: 28px; }
+
+  #map { height: 540px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); border: 1px solid var(--line); }
+
+  .day-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  .day-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    border-left: 6px solid;
+  }
+  .day-card.d1 { border-left-color: var(--d1); }
+  .day-card.d2 { border-left-color: var(--d2); }
+  .day-card.d3 { border-left-color: var(--d3); }
+  .day-card.d4 { border-left-color: var(--d4); }
+
+  .day-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .day-num { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .day-title { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .day-metrics { display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  .day-metric b { color: var(--ink); font-weight: 600; }
+  .scenic-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .day-body { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; margin-top: 12px; }
+  @media (max-width: 720px) { .day-body { grid-template-columns: 1fr; } }
+
+  .stop-list { display: flex; flex-direction: column; gap: 10px; }
+  .stop {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #f9fafb;
+    border-radius: 10px;
+    align-items: start;
+  }
+  .stop-pin {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .stop-name { font-weight: 600; font-size: 15px; }
+  .stop-why { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .stop-time { font-size: 12px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+  .hotel-card {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid #bae6fd;
+  }
+  .hotel-label { font-size: 11px; color: var(--water); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 6px; }
+  .hotel-name { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .hotel-row { display: flex; justify-content: space-between; font-size: 13px; margin: 4px 0; color: var(--muted); }
+  .hotel-row b { color: var(--ink); }
+  .hotel-why { font-size: 13px; color: var(--ink); margin-top: 10px; padding-top: 10px; border-top: 1px solid #bae6fd; }
+  .hotel-cta {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 9px 16px;
+    background: var(--water);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .hotel-alt { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 720px) { .summary-grid { grid-template-columns: 1fr; } }
+  .summary-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+  .summary-card h4 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .summary-card .big { font-size: 24px; font-weight: 700; color: var(--ink); }
+
+  .warnings {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+  }
+  .warnings h4 { font-weight: 700; margin-bottom: 8px; color: #92400e; }
+  .warnings ul { margin-left: 18px; }
+  .warnings li { margin: 4px 0; }
+
+  footer { text-align: center; padding: 32px 24px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Winnipeg → Toronto</h1>
+  <p class="subtitle">Father-son roadtrip · Trans-Canada Hwy 17 · Lake Superior North Shore</p>
+  <p class="subtitle" style="margin-top: 4px;">Mon Jun 29 → Thu Jul 2, 2026</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">2,230</div><div class="stat-label">km</div></div>
+    <div class="stat"><div class="stat-num">4</div><div class="stat-label">days</div></div>
+    <div class="stat"><div class="stat-num">3</div><div class="stat-label">hotel nights</div></div>
+    <div class="stat"><div class="stat-num">~26h</div><div class="stat-label">driving</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <section class="section">
+    <h2 class="section-title">Route map</h2>
+    <p class="section-sub">All overnight cities + scenic stops marked. Click pins for details. Day 3 (purple) is the scenic climax — Lake Superior Provincial Park.</p>
+    <div id="map"></div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">The 4-day plan</h2>
+    <p class="section-sub">Wawa chosen over SSM for night 2 — lets Day 3 morning hit Lake Superior Provincial Park in good light instead of fatigue-blurred late afternoon.</p>
+
+    <div class="day-grid">
+
+      <!-- DAY 1 -->
+      <div class="day-card d1">
+        <div class="day-head">
+          <div>
+            <div class="day-num">Day 1 · Mon Jun 29</div>
+            <div class="day-title">Winnipeg MB → Thunder Bay ON</div>
+          </div>
+          <div class="day-metrics">
+            <span class="day-metric"><b>705</b> km</span>
+            <span class="day-metric"><b>7.5</b> hr</span>
+            <span class="scenic-pill">Scenic 6/10</span>
+          </div>
+        </div>
+        <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">Depart 8:00 AM CDT. Lose 1hr at ON border. Arrive ~5:30 PM EDT.</div>
+
+        <div class="day-body">
+          <div>
+            <h4 style="font-size:13px; font-weight:600; margin-bottom:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Stops</h4>
+            <div class="stop-list">
+              <div class="stop"><div class="stop-pin">1</div><div><div class="stop-name">Kenora ON — Lake of the Woods waterfront</div><div class="stop-why">Best pit stop on prairie→shield transition. Coffee + photo at Husky the Muskie</div></div><div class="stop-time">40 min</div></div>
+              <div class="stop"><div class="stop-pin">2</div><div><div class="stop-name">Kakabeka Falls Provincial Park</div><div class="stop-why">40m waterfall, "Niagara of the North." Boardwalk loop 15 min. Right off Hwy 17, 30km before Thunder Bay</div></div><div class="stop-time">45 min</div></div>
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:12px;"><b>Fuel:</b> Kenora, Dryden, Ignace · <b>Lunch:</b> Dryden (Riverview Lodge) or pack from Winnipeg</div>
+          </div>
+
+          <div>
+            <div class="hotel-card">
+              <div class="hotel-label">🛏 Tonight's hotel</div>
+              <div class="hotel-name">Travelodge by Wyndham Thunder Bay</div>
+              <div class="hotel-row"><span>Address</span><b>450 Memorial Ave</b></div>
+              <div class="hotel-row"><span>Room</span><b>2 Queen Beds ✓</b></div>
+              <div class="hotel-row"><span>Price (taxes-in)</span><b>$150–165 CAD</b></div>
+              <div class="hotel-row"><span>Rating</span><b>3.8★ / 1500+ reviews</b></div>
+              <div class="hotel-row"><span>Parking</span><b>Free</b></div>
+              <div class="hotel-row"><span>Breakfast</span><b>Continental incl.</b></div>
+              <div class="hotel-why">On Hwy 17 (Memorial = the highway). Zero detour next morning. Free everything.</div>
+              <a href="https://www.wyndhamhotels.com/travelodge/thunder-bay-ontario/travelodge-by-wyndham-thunder-bay/overview" class="hotel-cta" target="_blank">Book direct →</a>
+              <div class="hotel-alt"><b>Backup:</b> Super 8 (across the street, $130–150, 3.6★) · <b>Upgrade:</b> Holiday Inn Express ($190–215, 4.4★)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 2 -->
+      <div class="day-card d2">
+        <div class="day-head">
+          <div>
+            <div class="day-num">Day 2 · Tue Jun 30</div>
+            <div class="day-title">Thunder Bay → Wawa ON</div>
+          </div>
+          <div class="day-metrics">
+            <span class="day-metric"><b>480</b> km</span>
+            <span class="day-metric"><b>5.75</b> hr</span>
+            <span class="scenic-pill">Scenic 9/10</span>
+          </div>
+        </div>
+        <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">Shortest driving day. Take time at stops — this is the prelude to Day 3's climax.</div>
+
+        <div class="day-body">
+          <div>
+            <h4 style="font-size:13px; font-weight:600; margin-bottom:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Stops</h4>
+            <div class="stop-list">
+              <div class="stop"><div class="stop-pin">1</div><div><div class="stop-name">Terry Fox Memorial</div><div class="stop-why">Site where Terry stopped his Marathon of Hope. Panoramic view of Sleeping Giant + Lake Superior. 5 min off Hwy 17</div></div><div class="stop-time">20 min</div></div>
+              <div class="stop"><div class="stop-pin">2</div><div><div class="stop-name">Ouimet Canyon Provincial Park</div><div class="stop-why">100m vertical canyon, 1km boardwalk loop. The single most underrated stop on this drive</div></div><div class="stop-time">50 min</div></div>
+              <div class="stop"><div class="stop-pin">3</div><div><div class="stop-name">Aguasabon Falls & Gorge (Terrace Bay)</div><div class="stop-why">Easy 5-min walk to viewing platform. Real waterfall + gorge combo</div></div><div class="stop-time">30 min</div></div>
+              <div class="stop"><div class="stop-pin">4</div><div><div class="stop-name">Neys Provincial Park beach</div><div class="stop-why">Genuine sand beach on Lake Superior. Stretch legs, dip feet</div></div><div class="stop-time">30 min</div></div>
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:12px;"><b>Lunch:</b> Marathon (Travelodge restaurant) or Terrace Bay (Drifters)</div>
+          </div>
+
+          <div>
+            <div class="hotel-card" style="background: linear-gradient(135deg, #fdf4ff, #fae8ff); border-color:#e9d5ff;">
+              <div class="hotel-label" style="color:#7e22ce;">🛏 Tonight's hotel</div>
+              <div class="hotel-name">Parkway Motel — Wawa</div>
+              <div class="hotel-row"><span>Address</span><b>232 Hwy 17 S, Wawa</b></div>
+              <div class="hotel-row"><span>Room</span><b>2 beds (call to confirm)</b></div>
+              <div class="hotel-row"><span>Price</span><b>$95–120 CAD</b></div>
+              <div class="hotel-row"><span>Rating</span><b>4.7★ / 474 reviews · #1 in Wawa</b></div>
+              <div class="hotel-row"><span>Parking</span><b>Free</b></div>
+              <div class="hotel-row"><span>Breakfast</span><b>No (Tim Hortons nearby)</b></div>
+              <div class="hotel-why">Highest-rated lodging in Wawa. Call <b>(705) 856-7020</b> to lock 2-bed config.</div>
+              <a href="https://parkwaymotel.com/" class="hotel-cta" style="background:#7e22ce;" target="_blank">Book direct →</a>
+              <div class="hotel-alt"><b>Backup #1:</b> High Falls Motel & Cabins (4.8★, $110–150) · <b>Backup #2:</b> Big Bird Inn / Best Western (4.0★, $108–144, guaranteed 2-Queen online)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 3 -->
+      <div class="day-card d3">
+        <div class="day-head">
+          <div>
+            <div class="day-num">Day 3 · Wed Jul 1 · 🍁 Canada Day</div>
+            <div class="day-title">Wawa → Sudbury ON</div>
+          </div>
+          <div class="day-metrics">
+            <span class="day-metric"><b>720</b> km</span>
+            <span class="day-metric"><b>8.0</b> hr</span>
+            <span class="scenic-pill" style="background:#fae8ff; color:#7e22ce;">Scenic 10/10 ⭐</span>
+          </div>
+        </div>
+        <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">Front-load Lake Superior Provincial Park in morning light. Push hard SSM→Sudbury in afternoon.</div>
+
+        <div class="day-body">
+          <div>
+            <h4 style="font-size:13px; font-weight:600; margin-bottom:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Stops (the showpiece)</h4>
+            <div class="stop-list">
+              <div class="stop"><div class="stop-pin">1</div><div><div class="stop-name">Old Woman Bay (LSPP)</div><div class="stop-why"><b>10/10 — single highest worth-it score of trip.</b> Iconic Lake Superior crescent beach with cliffs</div></div><div class="stop-time">45 min</div></div>
+              <div class="stop"><div class="stop-pin">2</div><div><div class="stop-name">Katherine Cove / Bathtub Island</div><div class="stop-why">Wade out at low water to the little island in the crystal pool. Only safe in calm conditions</div></div><div class="stop-time">45–60 min</div></div>
+              <div class="stop"><div class="stop-pin">3</div><div><div class="stop-name">Agawa Rock Pictographs</div><div class="stop-why">Ancient Ojibwe rock paintings on lake-edge cliff. 400m moderate trail through rock cleft</div></div><div class="stop-time">60 min</div></div>
+              <div class="stop"><div class="stop-pin">4</div><div><div class="stop-name">Chippewa Falls</div><div class="stop-why">Trans-Canada Highway halfway-point marker. Quick stretch-stop with waterfall</div></div><div class="stop-time">15 min</div></div>
+              <div class="stop"><div class="stop-pin">5</div><div><div class="stop-name">Pancake Bay Provincial Park</div><div class="stop-why">5km sand beach. Quick photo if pressed for time, otherwise swim</div></div><div class="stop-time">30 min</div></div>
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:12px;"><b>Lunch:</b> Sault Ste Marie (mid-afternoon arrival, ~2pm). Try Mrs. B's Pizza or Chummy's Grill.</div>
+          </div>
+
+          <div>
+            <div class="hotel-card" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color:#86efac;">
+              <div class="hotel-label" style="color:#15803d;">🛏 Tonight's hotel</div>
+              <div class="hotel-name">Hampton Inn by Hilton Sudbury</div>
+              <div class="hotel-row"><span>Address</span><b>2280 Regent St S</b></div>
+              <div class="hotel-row"><span>Room</span><b>2 Queen Beds ✓</b></div>
+              <div class="hotel-row"><span>Price (Canada Day +20%)</span><b>$165–198 CAD</b></div>
+              <div class="hotel-row"><span>Rating</span><b>4.3★ / 998 reviews</b></div>
+              <div class="hotel-row"><span>Parking</span><b>Free</b></div>
+              <div class="hotel-row"><span>Breakfast</span><b>Hot breakfast incl.</b></div>
+              <div class="hotel-why">2 min to Hwy 69 S → Hwy 400 → Toronto. Free hot breakfast saves $30. Brand reliability for Canada Day night.</div>
+              <a href="https://www.hilton.com/en/hotels/ysbryhx-hampton-sudbury-ontario/" class="hotel-cta" style="background:#15803d;" target="_blank">Book direct →</a>
+              <div class="hotel-alt"><b>Backup:</b> Holiday Inn Sudbury ($140–175, 4.0★) · <b>Cheapest clean:</b> Microtel Wyndham ($120–145, 4.0★)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAY 4 -->
+      <div class="day-card d4">
+        <div class="day-head">
+          <div>
+            <div class="day-num">Day 4 · Thu Jul 2</div>
+            <div class="day-title">Sudbury → Oakville (drop dad) → 560 Front St W</div>
+          </div>
+          <div class="day-metrics">
+            <span class="day-metric"><b>430</b> km</span>
+            <span class="day-metric"><b>5</b> hr</span>
+            <span class="scenic-pill">Scenic 5/10</span>
+          </div>
+        </div>
+        <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">Hwy 69 → 400 South. Drop dad in Oakville ~3 PM, arrive 560 Front W by ~5–6 PM (before peak GTA wall).</div>
+
+        <div class="day-body">
+          <div>
+            <h4 style="font-size:13px; font-weight:600; margin-bottom:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Stops (light day, save energy)</h4>
+            <div class="stop-list">
+              <div class="stop"><div class="stop-pin">1</div><div><div class="stop-name">French River Visitor Centre + Snowmobile Bridge</div><div class="stop-why">Striking modern bridge over the gorge. Walking path. 5 min off Hwy 69</div></div><div class="stop-time">30–45 min</div></div>
+              <div class="stop"><div class="stop-pin">2</div><div><div class="stop-name">Parry Sound</div><div class="stop-why">Town stop for lunch + leg stretch. Tower or Bobby Orr Hall of Fame if Dad's a hockey guy</div></div><div class="stop-time">45 min</div></div>
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:12px;"><b>End:</b> Drop Dad at 2395 Colonel William Pkwy, Oakville. Take 403 → QEW → Lakeshore → 560 Front St W. Avoid 401 east of 427 between 4–6pm.</div>
+          </div>
+
+          <div>
+            <div class="hotel-card" style="background: linear-gradient(135deg, #f0fdf4, #ecfeff); border-color:#a7f3d0;">
+              <div class="hotel-label" style="color:#059669;">🏁 You're home</div>
+              <div class="hotel-name">560 Front St W — Reve #1021</div>
+              <div class="hotel-row"><span>Move-in</span><b>July 2 evening</b></div>
+              <div class="hotel-row"><span>First shift</span><b>July 3 (CVH)</b></div>
+              <div class="hotel-row"><span>Key pickup</span><b>Confirm with Del 1 day prior</b></div>
+              <div class="hotel-row"><span>Parking</span><b>B33 underground</b></div>
+              <div class="hotel-row"><span>Locker</span><b>B65</b></div>
+              <div class="hotel-why">Buffer day before your first attending shift. Unpack the essentials, scout the CVH route once, sleep early.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Trip budget</h2>
+    <div class="summary-grid">
+      <div class="summary-card"><h4>Hotels (3 nights, mid picks)</h4><div class="big">~$430 CAD</div></div>
+      <div class="summary-card"><h4>Fuel estimate (2,230 km @ 8L/100, $1.65/L)</h4><div class="big">~$295 CAD</div></div>
+      <div class="summary-card"><h4>Provincial park day passes (~3)</h4><div class="big">~$36 CAD</div></div>
+      <div class="summary-card"><h4>Food (4 days, 2 ppl, modest)</h4><div class="big">~$320 CAD</div></div>
+      <div class="summary-card"><h4>Buffer (snacks, fees, surprises)</h4><div class="big">~$100 CAD</div></div>
+      <div class="summary-card" style="background:linear-gradient(135deg,#fff7ed,#fed7aa); border:1px solid #fdba74;"><h4>Total trip cost</h4><div class="big" style="color:var(--accent);">~$1,180 CAD</div></div>
+    </div>
+
+    <div class="warnings">
+      <h4>⚠ Key warnings</h4>
+      <ul>
+        <li><b>BOOK HOTELS NOW</b> — Wawa has ~6 properties total, July 1 is Canada Day, inventory will tighten by morning</li>
+        <li><b>Moose strike risk</b> — Marathon → Wawa stretch + Hwy 69 (Sudbury → Parry Sound) at dawn/dusk. Don't drive after sunset on these segments</li>
+        <li><b>Cell dead zones</b> — Ignace–Upsala, Marathon–White River, Wawa–Batchawana. Download offline Google Maps for ON before leaving</li>
+        <li><b>Time zone change</b> — Cross from CDT to EDT at the ON border (about 4 hrs east of Winnipeg). Lose 1 hour</li>
+        <li><b>Fuel up before remote stretches</b> — Don't trust the gauge between Ignace–Thunder Bay or Wawa–White River</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Generated for Fadi · Multi-agent route + hotel pipeline · 5 parallel agents · Google Maps data · Ontario Parks + tourism boards verified<br>
+  Files: /tmp/roadtrip/{route_plan, hotels_thunder_bay, hotels_wawa, hotels_sudbury, scenic_stops}.json
+</footer>
+
+<script>
+const map = L.map('map').setView([47.5, -85], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap',
+  maxZoom: 18
+}).addTo(map);
+
+// Route waypoints (Winnipeg → Thunder Bay → Wawa → Sudbury → Oakville → Toronto)
+const route = [
+  [49.8951, -97.1384],  // Winnipeg
+  [49.7667, -94.4894],  // Kenora
+  [49.7822, -92.8378],  // Dryden
+  [48.4001, -89.3119],  // Thunder Bay
+  [48.7800, -87.1100],  // Terrace Bay
+  [47.9956, -84.7833],  // Wawa
+  [46.5191, -84.3417],  // Sault Ste Marie
+  [46.4917, -80.9930],  // Sudbury
+  [46.0240, -80.5630],  // French River
+  [45.3500, -80.0367],  // Parry Sound
+  [43.4475, -79.7311],  // Oakville (dad drop)
+  [43.6443, -79.3958],  // 560 Front St W Toronto
+];
+
+// Route polyline
+L.polyline(route, { color: '#c2410c', weight: 4, opacity: 0.7 }).addTo(map);
+
+// Overnight cities (big markers)
+const overnight = [
+  { coord: [49.8951, -97.1384], name: 'Winnipeg', label: 'Start · Mon Jun 29 8AM', color: '#1e3a5f' },
+  { coord: [48.4001, -89.3119], name: 'Thunder Bay', label: '🛏 Night 1 · Travelodge', color: '#fb923c' },
+  { coord: [47.9956, -84.7833], name: 'Wawa', label: '🛏 Night 2 · Parkway Motel', color: '#f87171' },
+  { coord: [46.4917, -80.9930], name: 'Sudbury', label: '🛏 Night 3 · Hampton Inn (Canada Day)', color: '#a78bfa' },
+  { coord: [43.4475, -79.7311], name: 'Oakville', label: '👨 Drop Dad · Thu Jul 2 ~3PM', color: '#34d399' },
+  { coord: [43.6443, -79.3958], name: '560 Front St W', label: '🏁 Home · Thu Jul 2 ~5-6PM', color: '#059669' },
+];
+
+overnight.forEach(o => {
+  const icon = L.divIcon({
+    html: `<div style="background:${o.color}; color:white; border-radius:50%; width:38px; height:38px; display:flex; align-items:center; justify-content:center; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,0.3); border:3px solid white;">${o.name[0]}</div>`,
+    iconSize: [38, 38], iconAnchor: [19, 19], className: ''
+  });
+  L.marker(o.coord, { icon }).addTo(map).bindPopup(`<b>${o.name}</b><br>${o.label}`);
+});
+
+// Scenic stops (smaller markers)
+const stops = [
+  { coord: [49.7667, -94.4894], name: 'Kenora (Lake of the Woods)', day: 1 },
+  { coord: [48.402, -89.622], name: 'Kakabeka Falls', day: 1 },
+  { coord: [48.443, -89.121], name: 'Terry Fox Memorial', day: 2 },
+  { coord: [48.793, -88.674], name: 'Ouimet Canyon ★', day: 2 },
+  { coord: [48.788, -87.107], name: 'Aguasabon Falls', day: 2 },
+  { coord: [48.776, -86.598], name: 'Neys Provincial Park', day: 2 },
+  { coord: [47.853, -84.879], name: 'Old Woman Bay ★★★ (10/10)', day: 3 },
+  { coord: [47.539, -84.876], name: 'Katherine Cove / Bathtub Island', day: 3 },
+  { coord: [47.330, -84.605], name: 'Agawa Rock Pictographs', day: 3 },
+  { coord: [47.000, -84.547], name: 'Chippewa Falls (TCH midpoint)', day: 3 },
+  { coord: [46.954, -84.694], name: 'Pancake Bay', day: 3 },
+  { coord: [46.024, -80.563], name: 'French River Visitor Centre', day: 4 },
+  { coord: [45.3500, -80.0367], name: 'Parry Sound (lunch)', day: 4 },
+];
+
+const dayColors = { 1: '#fb923c', 2: '#f87171', 3: '#a78bfa', 4: '#34d399' };
+
+stops.forEach(s => {
+  const color = dayColors[s.day];
+  const marker = L.circleMarker(s.coord, {
+    radius: 8, fillColor: color, color: 'white', weight: 2, opacity: 1, fillOpacity: 0.9
+  }).addTo(map);
+  marker.bindPopup(`<b>${s.name}</b><br>Day ${s.day}`);
+});
+
+// Fit bounds
+map.fitBounds(L.latLngBounds(route).pad(0.05));
+</script>
+
+</body>
+</html>
